@@ -23,13 +23,14 @@ def test_cohens_kappa_calculation() -> None:
     assert kappa > 0.80
 
 
-def test_run_calibration_on_30_items() -> None:
+def test_run_calibration_on_30_items(tmp_path: Path) -> None:
     """Run calibration across the 30-item human-labelled dataset and verify target metrics."""
     assert LABELLED_FILE.exists(), "calibration/labelled.jsonl must exist"
 
+    test_report_file = tmp_path / "report.md"
     metrics, report_md = run_calibration(
         labelled_path=LABELLED_FILE,
-        output_report_path=REPORT_FILE,
+        output_report_path=test_report_file,
     )
 
     # 1. Total samples must be 30
@@ -44,7 +45,7 @@ def test_run_calibration_on_30_items() -> None:
     assert metrics.cohens_kappa > 0.60, f"Cohen's Kappa was {metrics.cohens_kappa}"
 
     # 4. Report file must be generated with required sections
-    assert REPORT_FILE.exists()
+    assert test_report_file.exists()
     assert "# LLM Judge Calibration Report" in report_md
     assert "Within-One Agreement" in report_md
     assert "Cohen's Kappa" in report_md

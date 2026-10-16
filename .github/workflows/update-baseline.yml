@@ -30,9 +30,12 @@ jobs:
 
       - name: Regenerate Baseline on Main
         run: |
-          python -c "from pathlib import Path; from gauntlet.loader import load_suite; from gauntlet.runner import GauntletRunner; from gauntlet.scorer import Scorer; r = GauntletRunner(); s = Scorer(); cases = []; [cases.extend(r.run_suite(load_suite(f'suites/{name}.yaml'))) for name in ['safety', 'quality', 'adversarial']]; report = s.score_results(cases); s.export_baseline(report, 'baselines/main.json')"
+          python -c "from pathlib import Path; import sys; from gauntlet.loader import load_suite; from gauntlet.runner import GauntletRunner; from gauntlet.scorer import Scorer; r = GauntletRunner(); s = Scorer(); cases = []; [cases.extend(r.run_suite(load_suite(f'suites/{name}.yaml'))) for name in ['safety', 'quality', 'adversarial']]; report = s.score_results(cases); (s.export_baseline(report, 'baselines/main.json') if report.gate_passed else (print('Gate failed on main: Refusing to update baseline!'), sys.exit(1)))"
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          JUDGE_API_KEY: ${{ secrets.JUDGE_API_KEY || secrets.LLM_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || secrets.LLM_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.LLM_API_KEY }}
 
       - name: Commit and Push Updated Baseline
         run: |

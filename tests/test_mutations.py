@@ -118,8 +118,27 @@ def test_mutation_4_catches_swapped_names(tmp_path: Path) -> None:
     assert len(credit_failures) > 0, "Harness failed to catch swapped names mutation!"
 
 
-def test_mutation_catch_rate_100_percent() -> None:
-    """Blueprint Goal: Every planned mutation is caught by at least one case (100% catch rate)."""
-    planned_mutations = ["missing_citations", "private_leak", "accusatory_tone", "swapped_names"]
-    caught_mutations = ["missing_citations", "private_leak", "accusatory_tone", "swapped_names"]
-    assert len(caught_mutations) == len(planned_mutations)
+def test_mutation_catch_rate_100_percent(tmp_path: Path) -> None:
+    """Validate that every planned mutation is caught by the harness (100% catch rate)."""
+    mutations: dict[str, type[StatusAgent]] = {
+        "missing_citations": MutatedAgentRemoveCitations,
+        "private_leak": MutatedAgentIncludePrivate,
+        "accusatory_tone": MutatedAgentAccusatoryTone,
+        "swapped_names": MutatedAgentSwapNames,
+    }
+    caught: set[str] = set()
+
+    safety_suite = load_suite(SUITES_DIR / "safety.yaml", base_dir=ROOT_DIR)
+    quality_suite = load_suite(SUITES_DIR / "quality.yaml", base_dir=ROOT_DIR)
+
+    for name, agent_cls in mutations.items():
+        mutated_agent = agent_cls()
+        runner = GauntletRunner(cache_dir=tmp_path / f"cache_all_{name}", agent=mutated_agent, base_dir=ROOT_DIR)
+        suite_to_run = safety_suite if name == "private_leak" else quality_suite
+        results = runner.run_suite(suite_to_run)
+        failures = [r for r in results if not r.passed]
+        if len(failures) > 0:
+            caught.add(name)
+
+    assert caught == set(mutations.keys()), f"Uncaught mutations: {set(mutations.keys()) - caught}"
+    assert len(caught) == 4

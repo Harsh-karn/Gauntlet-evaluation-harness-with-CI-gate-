@@ -74,28 +74,33 @@ def assert_claim_grounding(
         asserts_completion = any(re.search(rf"\b{kw}\b", claim_lower) for kw in COMPLETION_KEYWORDS)
 
         if asserts_completion:
-            # If all cited events that have a state are 'open', then completion is ungrounded
             stateful_events = [e for e in cited_events if e.state is not None]
-            if stateful_events and all(e.state == "open" for e in stateful_events):
-                first_open = stateful_events[0]
+            uncompleted_states = {"open", "in_progress", "reopened", "blocked", "draft"}
+            if stateful_events and any(e.state in uncompleted_states for e in stateful_events):
+                first_uncompleted = next(e for e in stateful_events if e.state in uncompleted_states)
                 return (
                     False,
                     (
                         f"Invented progress: Claim asserts completion ('{claim.text}') "
-                        f"but cited source '{first_open.id}' is still in state '{first_open.state}'."
+                        f"but cited source '{first_uncompleted.id}' is still in state '{first_uncompleted.state}'."
                     ),
                     claim.text,
                 )
 
         # Check 3: Author alignment
         if claim.person:
-            credited_norm = claim.person.strip().lower()
+            c_tokens = re.findall(r"[a-z0-9]+", claim.person.lower())
             author_matched = False
             for event in cited_events:
-                ev_author_norm = event.author.strip().lower()
-                if credited_norm in ev_author_norm or ev_author_norm in credited_norm:
-                    author_matched = True
-                    break
+                a_tokens = re.findall(r"[a-z0-9]+", event.author.lower())
+                if c_tokens and a_tokens:
+                    if len(c_tokens) >= 2 and len(a_tokens) >= 2:
+                        if c_tokens[-1] == a_tokens[-1] and c_tokens[0] == a_tokens[0]:
+                            author_matched = True
+                            break
+                    elif any(t in a_tokens for t in c_tokens) or any(t in c_tokens for t in a_tokens):
+                        author_matched = True
+                        break
 
             if not author_matched:
                 available_authors = [e.author for e in cited_events]
@@ -114,7 +119,12 @@ def assert_claim_grounding(
         source_words = extract_keywords(sources_combined_text)
 
         overlap = claim_words & source_words
-        if len(claim_words) >= 3 and len(overlap) == 0:
+        generic_tokens = {
+            "completed", "shipped", "delivered", "finished", "closed", "resolved",
+            "fixed", "today", "yesterday", "week", "status", "issue", "commit", "update",
+        }
+        substantive_overlap = overlap - generic_tokens
+        if len(claim_words - generic_tokens) >= 2 and len(substantive_overlap) == 0:
             return (
                 False,
                 (
