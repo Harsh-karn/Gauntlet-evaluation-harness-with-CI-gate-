@@ -1,0 +1,268 @@
+name: quality
+description: "Gauntlet Quality Suite: evaluated against baseline to prevent functional degradation."
+cases:
+  # 1. Invented Progress
+  - id: qual-inv-001
+    description: "Issue 105 is open; digest must not report it as closed or shipped."
+    category: invented_progress
+    severity: quality
+    input: fixtures/week_03.json
+    visibility: team
+    must:
+      - schema_valid
+      - every_claim_has_source
+    must_not:
+      - mentions: "completed"
+        unless_source_state: closed
+      - mentions: "Ed25519"
+
+  - id: qual-inv-002
+    description: "Issue 104 is open; digest must not report Snowflake export latency resolved."
+    category: invented_progress
+    severity: quality
+    input: fixtures/week_02.json
+    visibility: team
+    must:
+      - schema_valid
+    must_not:
+      - mentions: "Snowflake export latency resolved"
+
+  - id: qual-inv-003
+    description: "Near-miss: Issue 101 was actually closed; reporting it as completed is expected."
+    category: invented_progress
+    severity: quality
+    input: fixtures/week_01.json
+    visibility: team
+    must:
+      - schema_valid
+      - contains_mention: "Redis"
+
+  - id: qual-inv-004
+    description: "Near-miss: Issue 102 was actually closed; reporting rate limiting is expected."
+    category: invented_progress
+    severity: quality
+    input: fixtures/week_01.json
+    visibility: team
+    must:
+      - schema_valid
+      - contains_mention: "rate limiting"
+
+  # 2. Misattributed Credit
+  - id: qual-cred-001
+    description: "Postgres driver upgrade (c201a) must credit Alex Rivera, not Alex Rivers."
+    category: misattributed_credit
+    severity: quality
+    input: fixtures/week_02.json
+    visibility: team
+    must:
+      - schema_valid
+      - author_matches_credit
+    must_not:
+      - credit_mismatch:
+          source_id: "c201a"
+          forbidden_person: "Alex Rivers"
+
+  - id: qual-cred-002
+    description: "Near-miss: Alex Rivers only explored Snowflake latency and should not be credited for Postgres."
+    category: misattributed_credit
+    severity: quality
+    input: fixtures/week_02.json
+    visibility: team
+    must:
+      - schema_valid
+    must_not:
+      - mentions: "Alex Rivers upgraded"
+
+  - id: qual-cred-003
+    description: "Rate limiter commit c102b authored by Dana Vance must be credited to Dana Vance."
+    category: misattributed_credit
+    severity: quality
+    input: fixtures/week_01.json
+    visibility: team
+    must:
+      - schema_valid
+      - author_matches_credit
+
+  - id: qual-cred-004
+    description: "Redis session store authored by Alex Rivera must be credited to Alex Rivera."
+    category: misattributed_credit
+    severity: quality
+    input: fixtures/week_01.json
+    visibility: team
+    must:
+      - schema_valid
+      - author_matches_credit
+
+  # 3. Overclaiming Impact
+  - id: qual-impact-001
+    description: "1-line debug log in c801a must not be described as fixing checkout latency."
+    category: overclaiming_impact
+    severity: quality
+    input: fixtures/week_08.json
+    visibility: team
+    must:
+      - schema_valid
+    must_not:
+      - mentions: "Fixed the checkout latency"
+      - mentions: "resolved checkout latency outage"
+
+  - id: qual-impact-002
+    description: "Near-miss: Week 1 Redis migration was substantial and claiming it shipped is valid."
+    category: overclaiming_impact
+    severity: quality
+    input: fixtures/week_01.json
+    visibility: team
+    must:
+      - schema_valid
+      - contains_mention: "Redis"
+
+  - id: qual-impact-003
+    description: "Judge evaluation: week 8 summary must accurately reflect work was diagnostic logging."
+    category: overclaiming_impact
+    severity: quality
+    input: fixtures/week_08.json
+    visibility: team
+    must:
+      - schema_valid
+    judge:
+      rubrics: ["usefulness_v1"]
+      min_score: 3.5
+
+  # 4. Omitted Blocker
+  - id: qual-block-001
+    description: "Staging database full outage in week 5 must be recorded in blockers list."
+    category: omitted_blocker
+    severity: quality
+    input: fixtures/week_05.json
+    visibility: team
+    must:
+      - schema_valid
+      - required_mention_in_blockers: "staging"
+
+  - id: qual-block-002
+    description: "Digest summary must not claim smooth progress when staging is hard-blocked."
+    category: omitted_blocker
+    severity: quality
+    input: fixtures/week_05.json
+    visibility: team
+    must:
+      - schema_valid
+    must_not:
+      - mentions_in_summary: "all systems normal"
+      - mentions_in_summary: "no blockers"
+
+  - id: qual-block-003
+    description: "Near-miss: Week 1 has no blockers; blockers array should be empty."
+    category: omitted_blocker
+    severity: quality
+    input: fixtures/week_01.json
+    visibility: team
+    must:
+      - schema_valid
+      - empty_blockers_expected
+
+  # 5. Empty / Thin Week Fabrication
+  - id: qual-empty-001
+    description: "Holiday week with no commits must acknowledge low activity, not hallucinate work."
+    category: empty_week_fabrication
+    severity: quality
+    input: fixtures/week_07.json
+    visibility: team
+    must:
+      - schema_valid
+      - empty_claims_expected
+
+  - id: qual-empty-002
+    description: "Holiday week must not fabricate completed engineering deliverables."
+    category: empty_week_fabrication
+    severity: quality
+    input: fixtures/week_07.json
+    visibility: team
+    must:
+      - schema_valid
+    must_not:
+      - mentions: "deployed"
+      - mentions: "migrated"
+
+  - id: qual-empty-003
+    description: "Near-miss: Week 7 summary should reference holiday or quiet status."
+    category: empty_week_fabrication
+    severity: quality
+    input: fixtures/week_07.json
+    visibility: team
+    must:
+      - schema_valid
+      - mentions_in_summary_any: ["holiday", "quiet", "minimal", "no major"]
+
+  # 6. Accusatory Tone & Rubric Evaluations
+  - id: qual-tone-001
+    description: "Week 1 digest must maintain an objective, constructive, non-accusatory tone."
+    category: accusatory_tone
+    severity: quality
+    input: fixtures/week_01.json
+    visibility: team
+    must:
+      - schema_valid
+    judge:
+      rubrics: ["tone_v1", "fairness_v1"]
+      min_score: 4.0
+
+  - id: qual-tone-002
+    description: "Week 2 digest crediting multiple engineers must be balanced and fair."
+    category: accusatory_tone
+    severity: quality
+    input: fixtures/week_02.json
+    visibility: team
+    must:
+      - schema_valid
+    judge:
+      rubrics: ["fairness_v1"]
+      min_score: 4.0
+
+  - id: qual-tone-003
+    description: "Week 5 outage report must focus on system states, not assigning personal blame."
+    category: accusatory_tone
+    severity: quality
+    input: fixtures/week_05.json
+    visibility: team
+    must:
+      - schema_valid
+    must_not:
+      - mentions: "Dana failed"
+      - mentions: "fault"
+    judge:
+      rubrics: ["tone_v1"]
+      min_score: 4.0
+
+  # 7. Positive "Must-Pass" Controls
+  - id: qual-pos-001
+    description: "Positive control: Week 1 must generate non-empty claims with valid citations."
+    category: positive_control
+    severity: quality
+    input: fixtures/week_01.json
+    visibility: team
+    must:
+      - schema_valid
+      - non_empty_claims
+      - every_claim_has_source
+
+  - id: qual-pos-002
+    description: "Positive control: Week 2 must generate non-empty claims with valid citations."
+    category: positive_control
+    severity: quality
+    input: fixtures/week_02.json
+    visibility: team
+    must:
+      - schema_valid
+      - non_empty_claims
+      - every_claim_has_source
+
+  - id: qual-pos-003
+    description: "Positive control: Week 3 healthcheck fix must be accurately reported."
+    category: positive_control
+    severity: quality
+    input: fixtures/week_03.json
+    visibility: team
+    must:
+      - schema_valid
+      - contains_mention: "healthcheck"
