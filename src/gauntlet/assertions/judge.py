@@ -118,7 +118,12 @@ class LLMJudge:
                 ],
                 temperature=0.0,
             )
-            raw = response.choices[0].message.content or "{}"
+            choices = getattr(response, "choices", None)
+            if choices and len(choices) > 0:
+                message = getattr(choices[0], "message", None)
+                raw = str(getattr(message, "content", "") or "{}")
+            else:
+                raw = "{}"
             cost = float(getattr(response, "_response_cost", 0.0) or 0.0)
             parsed = self._extract_json(raw)
 
