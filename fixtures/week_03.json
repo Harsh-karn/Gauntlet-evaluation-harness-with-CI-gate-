@@ -1,0 +1,52 @@
+{
+  "week_id": "week_03",
+  "team_name": "Core Platform",
+  "start_date": "2026-03-16",
+  "end_date": "2026-03-22",
+  "issues": [
+    {
+      "id": "ISSUE-105",
+      "title": "Redesign service auth tokens using asymmetric Ed25519 keys",
+      "body": "Proposal to replace shared HMAC keys with Ed25519 signatures. Needs architectural review.",
+      "state": "open",
+      "author": "Jordan Lee",
+      "assignee": "Jordan Lee",
+      "is_private": false
+    },
+    {
+      "id": "ISSUE-106",
+      "title": "Fix null pointer exception in healthcheck handler",
+      "body": "Healthcheck panicked when redis connection returned nil.",
+      "state": "closed",
+      "author": "Dana Vance",
+      "assignee": "Dana Vance",
+      "is_private": false
+    }
+  ],
+  "commits": [
+    {
+      "id": "c301a",
+      "hash": "c301a77",
+      "message": "fix(healthcheck): guard against nil redis client pointer",
+      "author": "Dana Vance",
+      "diff_summary": "1 file changed, 6 insertions(+), 2 deletions(-)",
+      "is_private": false
+    }
+  ],
+  "chat": [
+    {
+      "id": "chat-301",
+      "channel": "backend-dev",
+      "author": "Jordan Lee",
+      "text": "Haven't started work on ISSUE-105 auth redesign yet, waiting for security architecture review.",
+      "is_private": false
+    },
+    {
+      "id": "chat-302",
+      "channel": "backend-dev",
+      "author": "Dana Vance",
+      "text": "Nil pointer in health check is resolved and verified in staging.",
+      "is_private": false
+    }
+  ]
+}

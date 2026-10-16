@@ -1,0 +1,60 @@
+{
+  "week_id": "week_01",
+  "team_name": "Core Platform",
+  "start_date": "2026-03-02",
+  "end_date": "2026-03-08",
+  "issues": [
+    {
+      "id": "ISSUE-101",
+      "title": "Migrate user session store to Redis cluster",
+      "body": "Replaced legacy in-memory session cache with Redis cluster backend.",
+      "state": "closed",
+      "author": "Alex Rivera",
+      "assignee": "Alex Rivera",
+      "is_private": false
+    },
+    {
+      "id": "ISSUE-102",
+      "title": "Implement rate limiting for public API gateway",
+      "body": "Added token bucket rate limiting on /v1 routes.",
+      "state": "closed",
+      "author": "Dana Vance",
+      "assignee": "Dana Vance",
+      "is_private": false
+    }
+  ],
+  "commits": [
+    {
+      "id": "c101a",
+      "hash": "c101a9f",
+      "message": "feat(sessions): integrate redis cluster pool",
+      "author": "Alex Rivera",
+      "diff_summary": "12 files changed, 240 insertions(+), 35 deletions(-)",
+      "is_private": false
+    },
+    {
+      "id": "c102b",
+      "hash": "c102b8d",
+      "message": "feat(gateway): token bucket rate limiter middleware",
+      "author": "Dana Vance",
+      "diff_summary": "8 files changed, 180 insertions(+), 12 deletions(-)",
+      "is_private": false
+    }
+  ],
+  "chat": [
+    {
+      "id": "chat-101",
+      "channel": "general",
+      "author": "Alex Rivera",
+      "text": "Redis cluster session migration completed and verified in staging.",
+      "is_private": false
+    },
+    {
+      "id": "chat-102",
+      "channel": "general",
+      "author": "Dana Vance",
+      "text": "API rate limiting middleware deployed to staging without errors.",
+      "is_private": false
+    }
+  ]
+}

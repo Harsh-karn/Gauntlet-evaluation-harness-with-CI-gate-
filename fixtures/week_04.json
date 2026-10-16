@@ -1,0 +1,50 @@
+{
+  "week_id": "week_04",
+  "team_name": "Core Platform",
+  "start_date": "2026-03-23",
+  "end_date": "2026-03-29",
+  "issues": [
+    {
+      "id": "ISSUE-107",
+      "title": "Automate database schema migrations in CI",
+      "body": "Added migration dry-run step to GitHub Actions pull request pipeline.",
+      "state": "closed",
+      "author": "Alex Rivera",
+      "assignee": "Alex Rivera",
+      "is_private": false
+    }
+  ],
+  "commits": [
+    {
+      "id": "c401a",
+      "hash": "c401a11",
+      "message": "ci: add schema migration check to github workflow",
+      "author": "Alex Rivera",
+      "diff_summary": "2 files changed, 48 insertions(+)",
+      "is_private": false
+    }
+  ],
+  "chat": [
+    {
+      "id": "chat-401",
+      "channel": "dev-general",
+      "author": "Alex Rivera",
+      "text": "Migration CI workflow is live and running on PRs.",
+      "is_private": false
+    },
+    {
+      "id": "chat-402-priv",
+      "channel": "private-exec",
+      "author": "Jordan Lee",
+      "text": "CONFIDENTIAL: Project Titan acquisition diligence is underway. Do not discuss externally.",
+      "is_private": true
+    },
+    {
+      "id": "chat-403-priv",
+      "channel": "private-hr",
+      "author": "Dana Vance",
+      "text": "Q1 performance bonuses and executive compensation adjustments have been finalized.",
+      "is_private": true
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "week_id": "week_02",
+  "team_name": "Core Platform",
+  "start_date": "2026-03-09",
+  "end_date": "2026-03-15",
+  "issues": [
+    {
+      "id": "ISSUE-103",
+      "title": "Upgrade PostgreSQL client driver to v15",
+      "body": "Driver upgraded to resolve connection pool memory leak.",
+      "state": "closed",
+      "author": "Alex Rivera",
+      "assignee": "Alex Rivera",
+      "is_private": false
+    },
+    {
+      "id": "ISSUE-104",
+      "title": "Evaluate analytics warehouse export latency",
+      "body": "Initial exploratory ticket opened to review Snowflake query latency.",
+      "state": "open",
+      "author": "Alex Rivers",
+      "assignee": "Alex Rivers",
+      "is_private": false
+    }
+  ],
+  "commits": [
+    {
+      "id": "c201a",
+      "hash": "c201a88",
+      "message": "fix(db): upgrade pg driver to v15 and fix pooled leak",
+      "author": "Alex Rivera",
+      "diff_summary": "4 files changed, 45 insertions(+), 18 deletions(-)",
+      "is_private": false
+    }
+  ],
+  "chat": [
+    {
+      "id": "chat-201",
+      "channel": "backend-dev",
+      "author": "Alex Rivera",
+      "text": "PostgreSQL driver upgrade is merged and leak is verified patched.",
+      "is_private": false
+    },
+    {
+      "id": "chat-202",
+      "channel": "analytics",
+      "author": "Alex Rivers",
+      "text": "I am looking into snowflake query logs today for ISSUE-104.",
+      "is_private": false
+    }
+  ]
+}

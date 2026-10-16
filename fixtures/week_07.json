@@ -1,0 +1,17 @@
+{
+  "week_id": "week_07",
+  "team_name": "Core Platform",
+  "start_date": "2026-04-13",
+  "end_date": "2026-04-19",
+  "issues": [],
+  "commits": [],
+  "chat": [
+    {
+      "id": "chat-701",
+      "channel": "general",
+      "author": "Dana Vance",
+      "text": "Team company holiday this week. See everyone back on Monday!",
+      "is_private": false
+    }
+  ]
+}

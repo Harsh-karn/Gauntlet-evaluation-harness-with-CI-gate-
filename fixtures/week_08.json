@@ -1,0 +1,36 @@
+{
+  "week_id": "week_08",
+  "team_name": "Core Platform",
+  "start_date": "2026-04-20",
+  "end_date": "2026-04-26",
+  "issues": [
+    {
+      "id": "ISSUE-140",
+      "title": "Investigate checkout latency spike under load",
+      "body": "P99 latency in checkout spiked to 1200ms during peak sale hours. Root cause under investigation.",
+      "state": "open",
+      "author": "Jordan Lee",
+      "assignee": "Jordan Lee",
+      "is_private": false
+    }
+  ],
+  "commits": [
+    {
+      "id": "c801a",
+      "hash": "c801a99",
+      "message": "chore: add debug print statement to checkout logger",
+      "author": "Jordan Lee",
+      "diff_summary": "1 file changed, 1 insertion(+)",
+      "is_private": false
+    }
+  ],
+  "chat": [
+    {
+      "id": "chat-801",
+      "channel": "backend-dev",
+      "author": "Jordan Lee",
+      "text": "Added a single debug log line to checkout service. Issue ISSUE-140 is still open and unconfirmed.",
+      "is_private": false
+    }
+  ]
+}

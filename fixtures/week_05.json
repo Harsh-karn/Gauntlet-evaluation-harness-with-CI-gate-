@@ -1,0 +1,52 @@
+{
+  "week_id": "week_05",
+  "team_name": "Core Platform",
+  "start_date": "2026-03-30",
+  "end_date": "2026-04-05",
+  "issues": [
+    {
+      "id": "ISSUE-110",
+      "title": "Upgrade Kubernetes ingress controller to v1.10",
+      "body": "Ingress controller upgrade completed.",
+      "state": "closed",
+      "author": "Alex Rivera",
+      "assignee": "Alex Rivera",
+      "is_private": false
+    },
+    {
+      "id": "ISSUE-111",
+      "title": "CRITICAL: Staging Aurora PostgreSQL cluster disk full",
+      "body": "Staging Aurora database has run out of storage, blocking all integration testing and billing service deployments.",
+      "state": "open",
+      "author": "Dana Vance",
+      "assignee": "Dana Vance",
+      "is_private": false
+    }
+  ],
+  "commits": [
+    {
+      "id": "c501a",
+      "hash": "c501a33",
+      "message": "ops: upgrade ingress helm chart to 1.10",
+      "author": "Alex Rivera",
+      "diff_summary": "3 files changed, 24 insertions(+), 10 deletions(-)",
+      "is_private": false
+    }
+  ],
+  "chat": [
+    {
+      "id": "chat-501",
+      "channel": "incidents",
+      "author": "Dana Vance",
+      "text": "CRITICAL BLOCKER: Staging database disk is at 100% capacity. No team can deploy until infra provisions extra EBS storage.",
+      "is_private": false
+    },
+    {
+      "id": "chat-502",
+      "channel": "dev-general",
+      "author": "Alex Rivera",
+      "text": "Ingress upgrade done, but we are completely blocked on billing tests due to the staging DB outage.",
+      "is_private": false
+    }
+  ]
+}
