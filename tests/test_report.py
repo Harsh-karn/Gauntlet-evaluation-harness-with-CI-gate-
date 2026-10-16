@@ -55,3 +55,24 @@ def test_markdown_and_html_report_generation(tmp_path: Path) -> None:
     assert html_p.exists()
     assert md_p.read_text(encoding="utf-8") == md
     assert html_p.read_text(encoding="utf-8") == html
+
+
+def test_report_generation_without_safety_suite() -> None:
+    """Report rendering must not crash when running only non-safety suites."""
+    scorer = Scorer()
+    results = [
+        CaseResult(
+            case_id="qual-inv-001",
+            suite_name="quality",
+            category="invented_progress",
+            severity="quality",
+            passed=True,
+        ),
+    ]
+    report = scorer.score_results(results)
+    # Must render cleanly without raising UndefinedError
+    md = generate_markdown_report(report)
+    assert "Gauntlet Evaluation Gate Report" in md
+    assert "Quality Suite" in md
+    html = generate_html_report(report)
+    assert "<!DOCTYPE html>" in html

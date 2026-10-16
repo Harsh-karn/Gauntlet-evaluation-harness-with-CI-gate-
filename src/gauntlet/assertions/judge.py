@@ -117,6 +117,7 @@ class LLMJudge:
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.0,
+                api_key=api_key,
             )
             choices = getattr(response, "choices", None)
             if choices and len(choices) > 0:

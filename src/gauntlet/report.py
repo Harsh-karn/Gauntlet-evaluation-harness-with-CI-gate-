@@ -28,8 +28,8 @@ MARKDOWN_PR_TEMPLATE = """## 🛡️ Gauntlet Evaluation Gate Report {% if pr_nu
 | Metric | Current Run | Baseline Delta | Status |
 | :--- | :--- | :--- | :--- |
 | **Overall Pass Rate** | **{{ report.overall_pass_rate }}%** ({{ report.total_passed }}/{{ report.total_cases }}) | {% if report.baseline_diff and "quality" in report.baseline_diff.pass_rate_deltas %}{{ "%+0.2f" % report.baseline_diff.pass_rate_deltas["quality"] }}%{% else %}N/A{% endif %} | {% if report.overall_pass_rate == 100.0 %}✅ Optimal{% elif report.gate_passed %}🟡 Acceptable{% else %}🔴 Gated{% endif %} |
-| **Safety Suite** | **{{ report.suites.safety.pass_rate }}%** ({{ report.suites.safety.passed }}/{{ report.suites.safety.total }}) | 0.0% | {% if report.suites.safety.pass_rate == 100.0 %}✅ 100% Passed{% else %}❌ Violation{% endif %} |
-| **Quality Suite** | **{{ report.suites.quality.pass_rate if report.suites.quality else "N/A" }}%** | {% if report.baseline_diff and "quality" in report.baseline_diff.pass_rate_deltas %}{{ "%+0.2f" % report.baseline_diff.pass_rate_deltas["quality"] }}%{% else %}N/A{% endif %} | {% if report.suites.quality and report.suites.quality.failed == 0 %}✅ Unchanged{% else %}ℹ️ Evaluated{% endif %} |
+| **Safety Suite** | **{% if 'safety' in report.suites %}{{ report.suites.safety.pass_rate }}% ({{ report.suites.safety.passed }}/{{ report.suites.safety.total }}){% else %}N/A{% endif %}** | {% if report.baseline_diff and "safety" in report.baseline_diff.pass_rate_deltas %}{{ "%+0.2f" % report.baseline_diff.pass_rate_deltas["safety"] }}%{% else %}N/A{% endif %} | {% if 'safety' in report.suites and report.suites.safety.pass_rate == 100.0 %}✅ 100% Passed{% elif 'safety' in report.suites %}❌ Violation{% else %}ℹ️ Not Run{% endif %} |
+| **Quality Suite** | **{{ report.suites.quality.pass_rate if 'quality' in report.suites else "N/A" }}%** | {% if report.baseline_diff and "quality" in report.baseline_diff.pass_rate_deltas %}{{ "%+0.2f" % report.baseline_diff.pass_rate_deltas["quality"] }}%{% else %}N/A{% endif %} | {% if 'quality' in report.suites and report.suites.quality.failed == 0 %}✅ Unchanged{% else %}ℹ️ Evaluated{% endif %} |
 | **Total Evaluation Spend** | **${{ "%.4f" % report.total_spend }}** | - | ⚡ Zero CI Cost with Caching |
 | **Flaky Cases Detected** | **{{ report.flaky_count }}** | - | {% if report.flaky_count == 0 %}✅ Stable{% else %}⚠️ Disagreements Found{% endif %} |
 
@@ -244,8 +244,8 @@ HTML_REPORT_TEMPLATE = """<!DOCTYPE html>
       </div>
       <div class="card">
         <div class="card-label">Safety Suite Rate</div>
-        <div class="card-val" style="color: {% if report.suites.safety.pass_rate == 100.0 %}var(--green){% else %}var(--red){% endif %};">
-          {{ report.suites.safety.pass_rate }}%
+        <div class="card-val" style="color: {% if 'safety' in report.suites and report.suites.safety.pass_rate == 100.0 %}var(--green){% elif 'safety' in report.suites %}var(--red){% else %}var(--text-muted){% endif %};">
+          {% if 'safety' in report.suites %}{{ report.suites.safety.pass_rate }}%{% else %}N/A{% endif %}
         </div>
       </div>
       <div class="card">

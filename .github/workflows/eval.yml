@@ -26,11 +26,22 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[dev]"
 
+      - name: Restore Gauntlet Evaluation Cache
+        uses: actions/cache@v4
+        with:
+          path: .gauntlet_cache
+          key: gauntlet-eval-${{ runner.os }}-${{ hashFiles('agents/**', 'fixtures/**', 'suites/**') }}
+          restore-keys: |
+            gauntlet-eval-${{ runner.os }}-
+
       - name: Run Gauntlet Evaluation Suites
         run: |
           python -m gauntlet.cli run --suites safety,quality,adversarial --baseline baselines/main.json --report-dir report
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          JUDGE_API_KEY: ${{ secrets.JUDGE_API_KEY || secrets.LLM_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || secrets.LLM_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || secrets.LLM_API_KEY }}
           GAUNTLET_BUDGET: 5.00
 
       - name: Upload Evaluation Artifacts
@@ -43,6 +54,7 @@ jobs:
       - name: Post PR Comment
         if: always()
         run: |
-          python -m gauntlet.cli comment --pr ${{ github.event.pull_request.number }} --report-dir report
+          python -m gauntlet.cli comment --pr "$PR_NUMBER" --report-dir report
         env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

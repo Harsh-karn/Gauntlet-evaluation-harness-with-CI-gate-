@@ -88,9 +88,15 @@ class GauntletRunner:
         self.base_dir = base_dir or Path.cwd()
         self.cumulative_spend = 0.0
 
-    def compute_cache_key(self, prompt_text: str, model: str, temperature: float) -> str:
-        """Compute SHA256 prompt hash for repeatable zero-cost CI evaluation."""
-        payload = f"{model}:{temperature}:{prompt_text}"
+    def compute_cache_key(
+        self,
+        prompt_text: str,
+        model: str,
+        temperature: float,
+        system_prompt: str = "",
+    ) -> str:
+        """Compute SHA256 prompt hash including system prompt for repeatable zero-cost CI evaluation."""
+        payload = f"{model}:{temperature}:{system_prompt}:{prompt_text}"
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
     def run_case_trial(self, case: TestCase, trial_index: int) -> TrialRecord:
@@ -107,7 +113,12 @@ class GauntletRunner:
 
         # 2. Check cache for agent output
         prompt_text = self.agent.build_user_message(weekly_input, case.visibility)
-        cache_key = self.compute_cache_key(prompt_text, self.agent.model, self.agent.temperature)
+        cache_key = self.compute_cache_key(
+            prompt_text,
+            self.agent.model,
+            self.agent.temperature,
+            system_prompt=self.agent.system_prompt,
+        )
 
         cached_entry = self.cache.get(cache_key)
         is_cached = False
@@ -213,6 +224,8 @@ class GauntletRunner:
                         failing_assertions.append(f"only_public_sources: {p_reason}")
                         if p_off:
                             offending_texts.append(p_off)
+                else:
+                    raise ValueError(f"Unrecognized 'must' constraint string in case '{case.id}': '{req}'")
             elif isinstance(req, dict):
                 if "contains_mention" in req:
                     term = req["contains_mention"]
@@ -221,23 +234,29 @@ class GauntletRunner:
                         failing_assertions.append(f"required_mention: {m_reason}")
                         if m_off:
                             offending_texts.append(m_off)
-                if "required_mention_in_blockers" in req:
+                elif "required_mention_in_blockers" in req:
                     term = req["required_mention_in_blockers"]
                     m_ok, m_reason, m_off = assert_required_mention(digest, term, field="blockers")
                     if not m_ok:
                         failing_assertions.append(f"required_mention_in_blockers: {m_reason}")
                         if m_off:
                             offending_texts.append(m_off)
-                if "mentions_in_summary_any" in req:
+                elif "mentions_in_summary_any" in req:
                     options = req["mentions_in_summary_any"]
                     matched_any = any(assert_required_mention(digest, opt, field="summary")[0] for opt in options)
                     if not matched_any:
                         failing_assertions.append(f"mentions_in_summary_any: None of {options} found in summary")
+                else:
+                    raise ValueError(f"Unrecognized 'must' constraint dict in case '{case.id}': {req}")
+            else:
+                raise ValueError(f"Unsupported constraint type in 'must' for case '{case.id}': {type(req)}")
 
         # 5. Evaluate 'must_not' constraints
         for forb in case.must_not:
             if isinstance(forb, dict):
+                recognized_key = False
                 if "forbidden_id" in forb:
+                    recognized_key = True
                     f_id = forb["forbidden_id"]
                     fid_ok, fid_reason, fid_off = assert_no_forbidden_id(digest, [f_id])
                     if not fid_ok:
@@ -245,25 +264,47 @@ class GauntletRunner:
                         if fid_off:
                             offending_texts.append(fid_off)
 
-                if "mentions" in forb:
-                    forbidden_str = forb["mentions"]
-                    # Check unless condition
-                    unless_state = forb.get("unless_source_state")
-                    applicable = True
-                    if unless_state:
-                        # Check if any cited event matches the allowed state
-                        has_allowed_state = any(e.state == unless_state for e in events.values() if e.state)
-                        if has_allowed_state:
-                            applicable = False
+                if "forbidden_source_types" in forb:
+                    recognized_key = True
+                    forbidden_types = [str(t).lower() for t in forb["forbidden_source_types"]]
+                    for item in digest.claims + digest.blockers:
+                        for sid in item.source_ids:
+                            ev = events.get(sid)
+                            if ev:
+                                ev_types = [ev.type.lower()]
+                                if ev.is_private:
+                                    ev_types.append(f"private_{ev.type.lower()}")
+                                if any(ft in ev_types for ft in forbidden_types):
+                                    failing_assertions.append(
+                                        f"forbidden_source_types: Cited source '{sid}' of disallowed type '{ev_types}'"
+                                    )
+                                    offending_texts.append(item.text)
 
-                    if applicable:
+                if "mentions" in forb:
+                    recognized_key = True
+                    forbidden_str = forb["mentions"]
+                    unless_state = forb.get("unless_source_state")
+                    if not unless_state:
                         fm_ok, fm_reason, fm_off = assert_forbidden_mention(digest, forbidden_str)
                         if not fm_ok:
                             failing_assertions.append(f"forbidden_mention: {fm_reason}")
                             if fm_off:
                                 offending_texts.append(fm_off)
+                    else:
+                        # Scoped to claims: if claim mentions forbidden_str, its cited sources must have unless_state
+                        for claim in digest.claims:
+                            if forbidden_str.lower() in claim.text.lower():
+                                cited_states = [
+                                    events[sid].state for sid in claim.source_ids if sid in events and events[sid].state
+                                ]
+                                if not cited_states or not all(st == unless_state for st in cited_states):
+                                    failing_assertions.append(
+                                        f"forbidden_mention: Claim mentioned '{forbidden_str}' without qualifying '{unless_state}' source state"
+                                    )
+                                    offending_texts.append(claim.text)
 
                 if "mentions_in_summary" in forb:
+                    recognized_key = True
                     forbidden_str = forb["mentions_in_summary"]
                     fm_ok, fm_reason, fm_off = assert_forbidden_mention(digest, forbidden_str, field="summary")
                     if not fm_ok:
@@ -272,13 +313,23 @@ class GauntletRunner:
                             offending_texts.append(fm_off)
 
                 if "credit_mismatch" in forb:
-                    bad_person = forb["credit_mismatch"].get("forbidden_person", "")
+                    recognized_key = True
+                    cm_data = forb["credit_mismatch"]
+                    bad_person = cm_data.get("forbidden_person", "")
+                    target_sid = cm_data.get("source_id")
                     for claim in digest.claims:
+                        if target_sid and target_sid not in claim.source_ids:
+                            continue
                         if claim.person and bad_person.lower() in claim.person.lower():
                             failing_assertions.append(
                                 f"credit_mismatch: Disallowed person '{claim.person}' credited in claim: '{claim.text}'"
                             )
                             offending_texts.append(claim.text)
+
+                if not recognized_key:
+                    raise ValueError(f"Unrecognized 'must_not' constraint dict in case '{case.id}': {forb}")
+            else:
+                raise ValueError(f"Unsupported constraint type in 'must_not' for case '{case.id}': {type(forb)}")
 
         # 6. Evaluate Grounding Assertion (every claim supported by source state)
         g_ok, g_reason, g_off = assert_claim_grounding(digest, events)

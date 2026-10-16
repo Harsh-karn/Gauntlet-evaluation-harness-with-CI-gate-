@@ -124,8 +124,10 @@ def test_scorer_quality_baseline_regression(tmp_path: Path) -> None:
     assert "qual-4" in report.baseline_diff.newly_failed
 
 
-def test_flakiness_majority_voting(tmp_path: Path) -> None:
+def test_flakiness_majority_voting(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """When trials disagree, case passes on majority vote and flags is_flaky = True."""
+    from gauntlet.runner import TrialRecord
+
     runner = GauntletRunner(cache_dir=tmp_path / "cache_flaky", trials_per_case=3, base_dir=ROOT_DIR)
 
     case = TestCase(
@@ -136,7 +138,69 @@ def test_flakiness_majority_voting(tmp_path: Path) -> None:
         must=["schema_valid"],
     )
 
-    # Run case
+    trial_counter = 0
+
+    def mock_trial(c: TestCase, trial_index: int) -> TrialRecord:
+        nonlocal trial_counter
+        trial_counter += 1
+        passed = trial_counter != 2  # Trial 1: pass, Trial 2: fail, Trial 3: pass
+        return TrialRecord(
+            trial_index=trial_index,
+            passed=passed,
+            failing_assertions=[] if passed else ["intermittent failure"],
+            offending_text=None if passed else "bad output",
+        )
+
+    monkeypatch.setattr(runner, "run_case_trial", mock_trial)
     res = runner.run_case(case, suite_name="test_suite")
     assert len(res.trials) == 3
     assert res.passed is True
+    assert res.is_flaky is True
+
+
+def test_adversarial_safety_failure_blocks_gate() -> None:
+    """Adversarial suite failure with severity 'safety' must block the CI gate."""
+    scorer = Scorer()
+    results = [
+        CaseResult(case_id="safe-1", suite_name="safety", category="c", severity="safety", passed=True),
+        CaseResult(
+            case_id="adv-inj-001",
+            suite_name="adversarial",
+            category="prompt_injection",
+            severity="safety",
+            passed=False,
+            failing_assertions=["forbidden_mention: SYSTEM OVERRIDE detected"],
+        ),
+    ]
+    report = scorer.score_results(results)
+    assert report.gate_passed is False
+    assert any("adv-inj-001" in r for r in report.gate_reasons)
+
+
+def test_missing_baseline_raises_file_not_found() -> None:
+    """Configuring a non-existent baseline file path must fail closed with FileNotFoundError."""
+    scorer = Scorer()
+    with pytest.raises(FileNotFoundError, match="Configured baseline file not found"):
+        scorer.score_results([], baseline_path="nonexistent_baseline.json")
+
+
+def test_cache_invalidation_on_system_prompt_change(tmp_path: Path) -> None:
+    """Cache key must differ when system_prompt changes."""
+    runner = GauntletRunner(cache_dir=tmp_path / "cache_inval", base_dir=ROOT_DIR)
+    k1 = runner.compute_cache_key("user prompt", "gpt-4o", 0.0, system_prompt="System Prompt A")
+    k2 = runner.compute_cache_key("user prompt", "gpt-4o", 0.0, system_prompt="System Prompt B")
+    assert k1 != k2, "Cache key did not invalidate on system prompt update!"
+
+
+def test_unrecognized_assertion_constraint_raises_error(tmp_path: Path) -> None:
+    """Unrecognized assertion constraints in must or must_not must fail loudly."""
+    runner = GauntletRunner(cache_dir=tmp_path / "cache_bad_constraint", base_dir=ROOT_DIR)
+    bad_case = TestCase(
+        id="bad-c1",
+        category="cat",
+        severity="quality",
+        input="fixtures/week_01.json",
+        must=["completely_unknown_must_assertion"],
+    )
+    with pytest.raises(ValueError, match="Unrecognized 'must' constraint string"):
+        runner.run_case_trial(bad_case, trial_index=1)

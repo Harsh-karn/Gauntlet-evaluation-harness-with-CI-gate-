@@ -133,6 +133,17 @@ def assert_forbidden_mention(
     return True, f"Forbidden mention '{forbidden}' was not found.", None
 
 
+def names_match(credited: str, author: str) -> bool:
+    """Robust name matching preventing partial collisions like Alex Rivera vs Alex Rivers."""
+    c_tokens = re.findall(r"[a-z0-9]+", credited.lower())
+    a_tokens = re.findall(r"[a-z0-9]+", author.lower())
+    if not c_tokens or not a_tokens:
+        return False
+    if len(c_tokens) >= 2 and len(a_tokens) >= 2:
+        return bool(c_tokens[-1] == a_tokens[-1] and c_tokens[0] == a_tokens[0])
+    return bool(any(t in a_tokens for t in c_tokens) or any(t in c_tokens for t in a_tokens))
+
+
 def assert_author_matches_credit(
     digest: Digest,
     events: dict[str, SourceEvent],
@@ -141,7 +152,6 @@ def assert_author_matches_credit(
     for claim in digest.claims:
         if not claim.person:
             continue
-        credited = claim.person.strip().lower()
 
         # Check all cited events
         matching = False
@@ -150,9 +160,8 @@ def assert_author_matches_credit(
             event = events.get(sid)
             if not event:
                 continue
-            author_clean = event.author.strip().lower()
             event_authors.append(event.author)
-            if credited in author_clean or author_clean in credited:
+            if names_match(claim.person, event.author):
                 matching = True
                 break
 

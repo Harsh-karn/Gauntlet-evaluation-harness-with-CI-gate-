@@ -37,17 +37,20 @@ class StatusAgent:
             self.system_prompt = "You are a weekly status update generator. Output JSON matching the Digest schema."
 
     def build_user_message(self, weekly_data: WeeklyInput, visibility: Literal["public", "team"]) -> str:
-        """Construct the prompt payload from weekly logs."""
+        """Construct the prompt payload from weekly logs using explicit boundary delimiters."""
         return (
             f"Please generate a weekly status digest with visibility '{visibility}'.\n\n"
             f"Team: {weekly_data.team_name}\n"
             f"Week ID: {weekly_data.week_id} ({weekly_data.start_date} to {weekly_data.end_date})\n\n"
-            f"=== GitHub Issues ===\n"
-            f"{json.dumps(weekly_data.issues, indent=2)}\n\n"
-            f"=== Git Commits ===\n"
-            f"{json.dumps(weekly_data.commits, indent=2)}\n\n"
-            f"=== Chat Excerpts ===\n"
+            f"<github_issues>\n"
+            f"{json.dumps(weekly_data.issues, indent=2)}\n"
+            f"</github_issues>\n\n"
+            f"<git_commits>\n"
+            f"{json.dumps(weekly_data.commits, indent=2)}\n"
+            f"</git_commits>\n\n"
+            f"<chat_excerpts>\n"
             f"{json.dumps(weekly_data.chat, indent=2)}\n"
+            f"</chat_excerpts>\n"
         )
 
     def run(
@@ -116,6 +119,7 @@ class StatusAgent:
                     model=self.model,
                     messages=messages,
                     temperature=self.temperature,
+                    api_key=api_key,
                 )
                 choices = getattr(response, "choices", None)
                 if choices and len(choices) > 0:
