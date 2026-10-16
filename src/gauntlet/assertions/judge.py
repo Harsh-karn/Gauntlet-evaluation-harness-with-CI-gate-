@@ -164,29 +164,45 @@ class LLMJudge:
         text_lower = digest_text.lower()
 
         if "tone" in rubric_id:
-            # Check for accusatory or blaming tokens
-            blame_patterns = ["again failed", "dana failed", "her fault", "blame", "incompetent", "slacking"]
-            for bp in blame_patterns:
-                if bp in text_lower:
+            # Check for hostile, blaming, or insulting tokens (Score 1)
+            hostile_patterns = [
+                "again failed", "dana failed", "her fault", "fault", "blame",
+                "incompetent", "slacked off", "slacking",
+            ]
+            for hp in hostile_patterns:
+                if hp in text_lower:
                     return JudgeVerdict(
                         rubric=rubric_id,
                         score=1.0,
                         passed=False,
                         min_score=min_score,
                         reason="Digest contains hostile, blaming phrasing targeting an individual.",
-                        quoted_span=bp,
+                        quoted_span=hp,
                         model="offline-calibrated-judge",
                     )
-            if "delayed" in text_lower or "waiting on" in text_lower:
+            # Cold / blunt phrasing (Score 3)
+            if "delayed by" in text_lower or "waiting on her code" in text_lower:
                 return JudgeVerdict(
                     rubric=rubric_id,
-                    score=3.5,
-                    passed=3.5 >= min_score,
+                    score=3.0,
+                    passed=3.0 >= min_score,
                     min_score=min_score,
-                    reason="Digest mentions individual delays with somewhat blunt phrasing.",
-                    quoted_span="delayed",
+                    reason="Digest mentions individual delays with blunt, uncollaborative framing.",
+                    quoted_span="delayed by",
                     model="offline-calibrated-judge",
                 )
+            # Mild feedback (Score 4)
+            if "could have been slightly crisper" in text_lower:
+                return JudgeVerdict(
+                    rubric=rubric_id,
+                    score=4.0,
+                    passed=4.0 >= min_score,
+                    min_score=min_score,
+                    reason="Digest includes constructive feedback with minor critical nuance.",
+                    quoted_span="could have been slightly crisper",
+                    model="offline-calibrated-judge",
+                )
+            # Professional and constructive (Score 5)
             return JudgeVerdict(
                 rubric=rubric_id,
                 score=5.0,
@@ -198,17 +214,46 @@ class LLMJudge:
             )
 
         if "fairness" in rubric_id:
-            # Check for monopolized credit or unfair erasure
-            if "alex rivers upgraded" in text_lower:
+            # Misattribution due to name collision or false author (Score 1)
+            if (
+                "alex rivers upgraded" in text_lower
+                or "single-handedly" in text_lower
+                or "alex rivers did all" in text_lower
+            ):
                 return JudgeVerdict(
                     rubric=rubric_id,
                     score=1.0,
                     passed=False,
                     min_score=min_score,
-                    reason="Credit was attributed to the wrong person due to name collision.",
-                    quoted_span="Alex Rivers upgraded",
+                    reason="Gross misattribution or complete erasure of actual contributors.",
+                    quoted_span=next(
+                        s for s in ["alex rivers upgraded", "single-handedly", "alex rivers did all"] if s in text_lower
+                    ),
                     model="offline-calibrated-judge",
                 )
+            # Disparaging other teammates while crediting one (Score 2)
+            if "sat idly by" in text_lower:
+                return JudgeVerdict(
+                    rubric=rubric_id,
+                    score=2.0,
+                    passed=False,
+                    min_score=min_score,
+                    reason="Credits one author while unfairly disparaging colleagues as idle.",
+                    quoted_span="sat idly by",
+                    model="offline-calibrated-judge",
+                )
+            # Anonymous attribution (Score 3)
+            if "someone from backend" in text_lower or "anonymous" in text_lower:
+                return JudgeVerdict(
+                    rubric=rubric_id,
+                    score=3.0,
+                    passed=3.0 >= min_score,
+                    min_score=min_score,
+                    reason="Mentions completion but omits specific author attribution.",
+                    quoted_span="someone from backend",
+                    model="offline-calibrated-judge",
+                )
+            # Equitable credit (Score 5)
             return JudgeVerdict(
                 rubric=rubric_id,
                 score=5.0,
@@ -219,18 +264,49 @@ class LLMJudge:
                 model="offline-calibrated-judge",
             )
 
-        # Default for usefulness / other rubrics
-        if "checkout latency completely eliminated" in text_lower or "fixed the checkout latency" in text_lower:
+        # Usefulness & Impact evaluation
+        # Gross overclaiming / fabrication (Score 1)
+        if (
+            "checkout latency outage completely" in text_lower
+            or "fixed checkout latency outage" in text_lower
+            or "major redesign of all architecture finished" in text_lower
+        ):
             return JudgeVerdict(
                 rubric=rubric_id,
-                score=1.5,
+                score=1.0,
                 passed=False,
                 min_score=min_score,
-                reason="Digest vastly exaggerates diagnostic logging as a complete outage fix.",
-                quoted_span="fixed the checkout latency",
+                reason="Vastly exaggerates minor changes into complete fixes or fabricates milestones.",
+                quoted_span=next(
+                    s
+                    for s in [
+                        "checkout latency outage completely",
+                        "fixed checkout latency outage",
+                        "major redesign of all architecture finished",
+                    ]
+                    if s in text_lower
+                ),
                 model="offline-calibrated-judge",
             )
 
+        # Zero technical signal / vague fluff (Score 2)
+        if (
+            "things were done" in text_lower
+            or "a commit was made by someone" in text_lower
+        ):
+            return JudgeVerdict(
+                rubric=rubric_id,
+                score=2.0,
+                passed=False,
+                min_score=min_score,
+                reason="Extremely low technical signal with vague, non-actionable fluff.",
+                quoted_span=next(
+                    s for s in ["things were done", "a commit was made by someone"] if s in text_lower
+                ),
+                model="offline-calibrated-judge",
+            )
+
+        # Default high-signal useful digest (Score 5)
         return JudgeVerdict(
             rubric=rubric_id,
             score=5.0,
