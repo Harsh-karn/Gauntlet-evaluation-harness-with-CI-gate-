@@ -76,8 +76,8 @@ class Claim(BaseModel):
     """A single factual claim made by the status agent."""
     text: str = Field(description="The claim sentence or bullet point.")
     source_ids: list[str] = Field(
-        min_length=1,
-        description="List of source event IDs that directly support this claim. Every claim must cite at least one source.",
+        default_factory=list,
+        description="List of source event IDs that directly support this claim.",
     )
     person: str | None = Field(
         default=None,

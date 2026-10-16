@@ -116,7 +116,14 @@ class GauntletRunner:
         if cached_entry is not None:
             raw_output = cached_entry["raw_output"]
             digest_dict = cached_entry.get("digest")
-            digest = Digest(**digest_dict) if digest_dict else self.agent._extract_and_parse_json(raw_output)
+            digest = None
+            if digest_dict:
+                try:
+                    digest = Digest(**digest_dict)
+                except Exception:
+                    digest = None
+            if digest is None:
+                digest = self.agent._extract_and_parse_json(raw_output)
             is_cached = True
         else:
             digest, raw_output, meta = self.agent.run(weekly_input, visibility=case.visibility)

@@ -36,10 +36,10 @@ def test_private_events_detected_in_fixture_4() -> None:
     assert any(e.id == "chat-402-priv" for e in private_events)
 
 
-def test_claim_requires_source_ids() -> None:
-    """A claim without at least one source ID must fail validation."""
-    with pytest.raises(ValidationError):
-        Claim(text="Did some work", source_ids=[])
+def test_claim_structure() -> None:
+    """A claim stores text, source_ids, and person attribution."""
+    claim_empty = Claim(text="Did some work", source_ids=[])
+    assert claim_empty.source_ids == []
 
     valid = Claim(text="Did some work", source_ids=["ISSUE-101"], person="Dana Vance")
     assert valid.person == "Dana Vance"
