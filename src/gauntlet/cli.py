@@ -17,7 +17,16 @@ from gauntlet.report import save_report_artifacts
 from gauntlet.runner import GauntletRunner
 from gauntlet.scorer import Scorer
 
-console = Console()
+if sys.platform == "win32":
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+console = Console(legacy_windows=False)
 
 
 @click.group()
@@ -261,3 +270,7 @@ def comment_command(pr: int, report_dir: str) -> None:
 
     console.print(f"[cyan]PR #{pr} Comment Output:[/cyan]\n")
     console.print(content)
+
+
+if __name__ == "__main__":
+    cli()
